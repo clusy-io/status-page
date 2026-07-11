@@ -6,6 +6,7 @@
 // never exposed to visitors.
 // ──────────────────────────────────────────────────────────────────────────
 
+import type { UpdateLevel } from "@/lib/incidents";
 import { httpProbe, type ServiceDef } from "@/lib/probes";
 
 export const SITE = {
@@ -32,6 +33,30 @@ export const SITE = {
   timezone: "UTC",
   /** Small "powered by" credit in the footer. Set false to hide. */
   showPoweredBy: true,
+};
+
+// ──────────────────────────────────────────────────────────────────────────
+// Notifications — automatic alerts when an incident opens, changes, or
+// resolves. Channels activate through env vars (see .env.example):
+// RESEND_API_KEY enables email subscriptions (double opt-in, KV required);
+// NOTIFY_SLACK_WEBHOOK_URL / NOTIFY_DISCORD_WEBHOOK_URL / NOTIFY_WEBHOOK_URL
+// enable webhooks. With nothing configured, nothing is sent and the
+// subscribe UI stays hidden.
+// ──────────────────────────────────────────────────────────────────────────
+
+export const NOTIFICATIONS = {
+  /**
+   * Which incident-update levels get announced. "monitoring" is omitted by
+   * default so subscribers hear "we found a problem" and "it's fixed"
+   * without the intermediate chatter.
+   */
+  levels: ["investigating", "identified", "resolved"] as UpdateLevel[],
+  /**
+   * From address for email notifications. The domain must be verified in
+   * your Resend account. Use a subdomain (e.g. updates.example.com) so
+   * status mail can't hurt your primary domain's reputation.
+   */
+  emailFrom: "Acme Status <status@updates.example.com>",
 };
 
 // ──────────────────────────────────────────────────────────────────────────

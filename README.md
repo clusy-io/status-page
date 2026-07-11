@@ -28,6 +28,10 @@ Built and battle-tested by [Clusy](https://clusy.io), where it runs
 - **Hand-curated incidents** — for anything the probes can't see (upstream
   degradations, post-mortems, maintenance windows), add an entry to a plain
   TypeScript file and push. No CMS.
+- **Automatic notifications** — visitors can subscribe by email (double
+  opt-in via Resend, one-click unsubscribe), and you can point Slack /
+  Discord / generic webhooks at it. Every incident update — auto-detected or
+  hand-written — is announced exactly once, on the next cron tick.
 - **Calm, minimal UI** — monochrome surface where status colour is the only
   chroma; light + dark via `prefers-color-scheme`; respects
   `prefers-reduced-motion`.
@@ -97,6 +101,31 @@ still deploys and serves live status; it just can't remember yesterday.
 Storage cost is negligible: one small JSON document per service plus one for
 incident state.
 
+## Notifications (optional)
+
+Incident updates can be pushed automatically. All channels are env-driven —
+configure none, one, or all:
+
+- **Email subscriptions** — set `RESEND_API_KEY` ([Resend](https://resend.com)
+  free tier is plenty) and put a verified From address in
+  `status.config.ts` → `NOTIFICATIONS.emailFrom`. A "Subscribe" button
+  appears in the header; visitors get a confirmation email (double opt-in)
+  and every notification carries a one-click unsubscribe link
+  (`List-Unsubscribe` included). Needs KV (subscribers must persist).
+  Use a subdomain for the From address so status mail can't hurt your
+  primary domain's sending reputation.
+- **Slack** — set `NOTIFY_SLACK_WEBHOOK_URL` to an incoming-webhook URL.
+- **Discord** — set `NOTIFY_DISCORD_WEBHOOK_URL`.
+- **Anything else** — set `NOTIFY_WEBHOOK_URL`; each update is POSTed as JSON
+  (`{ site, url, incident, update }`).
+
+What gets announced is controlled by `NOTIFICATIONS.levels` in
+`status.config.ts` — by default `investigating`, `identified`, and
+`resolved` (the intermediate "monitoring" step is skipped). A KV ledger
+guarantees each update is announced exactly once, and on the very first tick
+the ledger is seeded silently, so enabling notifications never replays your
+incident history.
+
 ## Posting an incident by hand
 
 Add an entry to `src/lib/incidents.ts` (newest first) and push:
@@ -125,10 +154,10 @@ incident with the same id.
 
 | Where | What |
 |-------|------|
-| `status.config.ts` | Branding (`SITE`) and the monitored services (`SERVICES`). The only file most deployments touch. |
+| `status.config.ts` | Branding (`SITE`), monitored services (`SERVICES`), and notification policy (`NOTIFICATIONS`). The only file most deployments touch. |
 | `src/lib/incidents.ts` | Hand-curated incident history. |
 | `src/app/globals.css` | Design tokens (colours, fonts) for light + dark. |
-| `.env.example` | The few env vars: `CRON_SECRET`, KV credentials, `STATUS_TIMEZONE`. |
+| `.env.example` | The few env vars: `CRON_SECRET`, KV credentials, notification channels, `STATUS_TIMEZONE`. |
 
 To use your own logo, drop a file into `public/` and set `SITE.logo` (e.g.
 `"/logo-mark.png"`). Without one, the header shows a live overall-status dot.

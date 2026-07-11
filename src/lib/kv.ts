@@ -1,8 +1,10 @@
 // ──────────────────────────────────────────────────────────────────────────
 // Minimal Upstash-compatible KV client.
 //
-// Shared by uptime history (lib/history.ts) and auto-incident logging
-// (lib/autoIncidents.ts). Uses the same env Vercel injects when you link a
+// Shared by uptime history (lib/history.ts), auto-incident logging
+// (lib/autoIncidents.ts), subscriptions (lib/subscribers.ts), and the
+// notification ledger (lib/notify.ts). Uses the same env Vercel injects when
+// you link a
 // KV / Upstash store to the project: KV_REST_API_URL + KV_REST_API_TOKEN.
 // With nothing configured every call degrades to "disabled" so the page still
 // deploys and serves live status — it just can't persist across cron ticks.
@@ -34,9 +36,15 @@ export async function kvGetJSON<T>(key: string): Promise<T | null> {
   }
 }
 
-export async function kvSetJSON(key: string, value: unknown): Promise<void> {
+/** Set a JSON document, optionally expiring after `ttlSeconds` (Upstash EX). */
+export async function kvSetJSON(
+  key: string,
+  value: unknown,
+  ttlSeconds?: number,
+): Promise<void> {
   if (!kvEnabled()) return;
-  await fetch(`${KV_URL}/set/${encodeURIComponent(key)}`, {
+  const ttl = ttlSeconds ? `?EX=${Math.round(ttlSeconds)}` : "";
+  await fetch(`${KV_URL}/set/${encodeURIComponent(key)}${ttl}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${KV_TOKEN}`,

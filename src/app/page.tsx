@@ -6,6 +6,8 @@ import { StatusDot } from "@/components/StatusDot";
 import { IncidentList } from "@/components/IncidentList";
 import { INCIDENTS } from "@/lib/incidents";
 import { readAutoIncidents, mergeIncidents, applyIncidents } from "@/lib/autoIncidents";
+import { SubscribeForm } from "@/components/SubscribeForm";
+import { emailNotificationsEnabled } from "@/lib/subscribers";
 import { SITE } from "../../status.config";
 
 // The page probes every service at request time so the first paint is already
@@ -13,7 +15,22 @@ import { SITE } from "../../status.config";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function Page() {
+// Outcome notes for the ?sub= redirects from /api/subscribe links.
+const SUB_NOTE: Record<string, string> = {
+  confirmed: "Subscription confirmed — we'll email you when something breaks (and when it's fixed).",
+  unsubscribed: "You've been unsubscribed. No more emails from us.",
+  invalid: "That link is invalid or has expired.",
+};
+
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const subParam = typeof sp.sub === "string" ? sp.sub : undefined;
+  const subNote = subParam ? SUB_NOTE[subParam] : undefined;
+  const canSubscribe = emailNotificationsEnabled();
   const probed = await probeAll();
 
   // Uptime history per service (empty arrays until KV is configured).
@@ -57,15 +74,24 @@ export default async function Page() {
             </span>
           </span>
         </div>
-        {SITE.homepage && (
-          <a
-            href={SITE.homepage}
-            className="text-[13px] text-[var(--text-soft)] transition-colors hover:text-[var(--text)]"
-          >
-            {SITE.homepage.replace(/^https?:\/\//, "").replace(/\/$/, "")} ↗
-          </a>
-        )}
+        <div className="flex items-center gap-3">
+          {canSubscribe && <SubscribeForm />}
+          {SITE.homepage && (
+            <a
+              href={SITE.homepage}
+              className="text-[13px] text-[var(--text-soft)] transition-colors hover:text-[var(--text)]"
+            >
+              {SITE.homepage.replace(/^https?:\/\//, "").replace(/\/$/, "")} ↗
+            </a>
+          )}
+        </div>
       </header>
+
+      {subNote && (
+        <p className="fade-up mb-4 rounded-lg border bg-[var(--surface)] px-4 py-2.5 text-[13px] text-[var(--text-soft)]">
+          {subNote}
+        </p>
+      )}
 
       <LiveStatus
         initial={{ overall, services, generatedAt }}

@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
 import { probeAll } from "@/lib/services";
 import { historyEnabled, recordSample } from "@/lib/history";
-import { autoIncidentsEnabled, processTick } from "@/lib/autoIncidents";
+import {
+  autoIncidentsEnabled,
+  mergeIncidents,
+  processTick,
+  readAutoIncidents,
+} from "@/lib/autoIncidents";
+import { INCIDENTS } from "@/lib/incidents";
+import { anyChannelConfigured, notifyNewUpdates } from "@/lib/notify";
 
 // Invoked by the Vercel cron schedule in vercel.json. Probes every service,
-// records one sample per service into the daily uptime history, and advances
-// the auto-incident state machine (both when KV is configured). Safe to hit
-// manually too.
+// records one sample per service into the daily uptime history, advances the
+// auto-incident state machine, and announces any not-yet-announced incident
+// updates to subscribers/webhooks (all persistent parts need KV). Safe to
+// hit manually too.
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -34,10 +42,17 @@ export async function GET(request: Request) {
   // Advance the auto-incident timeline (open / escalate / resolve).
   await processTick(results, now);
 
+  // Announce new updates — auto-detected AND hand-curated (a deploy that
+  // adds an entry to lib/incidents.ts notifies on the next tick).
+  const merged = mergeIncidents(await readAutoIncidents(), INCIDENTS);
+  const notified = await notifyNewUpdates(merged, now);
+
   return NextResponse.json({
     ok: true,
     recorded: historyEnabled(),
     incidents: autoIncidentsEnabled(),
+    notifications: anyChannelConfigured(),
+    notified,
     at: now.toISOString(),
     services: results.map((r) => ({ id: r.id, status: r.status })),
   });
