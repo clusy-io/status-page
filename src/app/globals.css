@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+/* ──────────────────────────────────────────────────────────────────────────
+   status-page — design tokens
+   A calm, monochrome surface. Status colour is the only chroma on the page,
+   so it carries all the meaning. Light + dark, system-driven.
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --bg: #fbfbfa;
+  --surface: #ffffff;
+  --border: #ececea;
+  --border-strong: #e0e0dd;
+  --text: #1a1a18;
+  --text-soft: #6b6b66;
+  --text-faint: #9a9a93;
+
+  --ok: #2ea66b;
+  --ok-soft: #e7f6ee;
+  --degraded: #d9920a;
+  --degraded-soft: #fbf1dc;
+  --down: #d64545;
+  --down-soft: #fbe6e6;
+  --maint: #4a73d6;
+  --maint-soft: #e7eefb;
+  --muted: #cfcfca;
+
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e0e10;
+    --surface: #161618;
+    --border: #232326;
+    --border-strong: #2c2c30;
+    --text: #ededed;
+    --text-soft: #a0a0a0;
+    --text-faint: #6a6a6e;
+
+    --ok: #3ecf8e;
+    --ok-soft: #122a1f;
+    --degraded: #e6a924;
+    --degraded-soft: #2c2410;
+    --down: #f06a6a;
+    --down-soft: #2c1414;
+    --maint: #6a8fe6;
+    --maint-soft: #141d2e;
+    --muted: #3a3a3e;
+
+    color-scheme: dark;
+  }
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+@keyframes statusPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--pulse-color, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-up {
+  animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
