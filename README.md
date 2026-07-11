@@ -164,4 +164,4 @@ To use your own logo, drop a file into `public/` and set `SITE.logo` (e.g.
 
 ## License
 
-[MIT](LICENSE) © [Clusy](https://clusy.io)
+[MIT](LICENSE) © [Clusy Inc.](https://clusy.io)
