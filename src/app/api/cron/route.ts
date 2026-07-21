@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { probeAll } from "@/lib/services";
 import { historyEnabled, recordSample } from "@/lib/history";
 import {
+  applyIncidents,
   autoIncidentsEnabled,
   mergeIncidents,
   processTick,
@@ -33,18 +34,26 @@ export async function GET(request: Request) {
   const now = new Date();
   const results = await probeAll();
 
+  // Advance the auto-incident timeline (open / escalate / resolve). It reasons
+  // only about what the probes can observe, so it runs on the raw results.
+  await processTick(results, now);
+
+  // Merge auto-detected AND hand-curated incidents (a deploy that adds an entry
+  // to lib/incidents.ts takes effect on the next tick).
+  const merged = mergeIncidents(await readAutoIncidents(), INCIDENTS);
+
+  // History is recorded from the incident-adjusted view: an ongoing incident
+  // folds in issues the blind probe can't see — e.g. an upstream model
+  // degradation — so the recorded day reflects it and stays truthful after the
+  // incident resolves.
+  const { services } = applyIncidents(results, merged);
   if (historyEnabled()) {
     await Promise.all(
-      results.map((r) => recordSample(r.id, r.status, now)),
+      services.map((r) => recordSample(r.id, r.status, now)),
     );
   }
 
-  // Advance the auto-incident timeline (open / escalate / resolve).
-  await processTick(results, now);
-
-  // Announce new updates — auto-detected AND hand-curated (a deploy that
-  // adds an entry to lib/incidents.ts notifies on the next tick).
-  const merged = mergeIncidents(await readAutoIncidents(), INCIDENTS);
+  // Announce new updates to subscribers/webhooks.
   const notified = await notifyNewUpdates(merged, now);
 
   return NextResponse.json({
@@ -54,6 +63,6 @@ export async function GET(request: Request) {
     notifications: anyChannelConfigured(),
     notified,
     at: now.toISOString(),
-    services: results.map((r) => ({ id: r.id, status: r.status })),
+    services: services.map((r) => ({ id: r.id, status: r.status })),
   });
 }

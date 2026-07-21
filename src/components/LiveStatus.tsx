@@ -132,7 +132,7 @@ export function LiveStatus({
                 </span>
               </div>
             </div>
-            <UptimeBar days={history[svc.id] ?? []} />
+            <UptimeBar days={history[svc.id] ?? []} liveStatus={svc.status} />
           </div>
         ))}
       </section>

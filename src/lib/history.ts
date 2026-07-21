@@ -17,6 +17,14 @@ import { SITE } from "../../status.config";
 export interface DayBucket {
   up: number;
   total: number;
+  /**
+   * Count of samples that were "up" but *degraded* (slow / partial). Optional so
+   * buckets written before this field existed still parse. `up` keeps counting
+   * degraded samples (they're available, so the uptime % is unchanged); this
+   * separate tally is what lets a degraded-but-not-down day render amber instead
+   * of green — availability can be 100% while the day was clearly not healthy.
+   */
+  deg?: number;
 }
 export type HistoryMap = Record<string, DayBucket>; // date -> bucket
 
@@ -104,6 +112,11 @@ export async function recordSample(
   if (status === "operational" || status === "maintenance" || status === "degraded") {
     bucket.up += 1;
   }
+  // Track degradation separately so a slow-but-available day still colours
+  // amber rather than a misleading full-uptime green.
+  if (status === "degraded") {
+    bucket.deg = (bucket.deg ?? 0) + 1;
+  }
   map[d] = bucket;
   await kvSet(key(serviceId), prune(map));
 }
@@ -111,6 +124,7 @@ export async function recordSample(
 export interface UptimeDay {
   date: string;
   uptime: number | null; // 0..1, or null if no data that day
+  degraded: boolean; // day had at least one degraded (slow/partial) sample
 }
 
 /** Read the last `days` of history for a service, oldest→newest, gap-filled. */
@@ -129,6 +143,7 @@ export async function readHistory(
     out.push({
       date: k,
       uptime: bucket && bucket.total > 0 ? bucket.up / bucket.total : null,
+      degraded: (bucket?.deg ?? 0) > 0,
     });
   }
   return out;

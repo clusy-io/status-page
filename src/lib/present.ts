@@ -25,12 +25,23 @@ export const STATUS_VAR: Record<Health, { fg: string; bg: string }> = {
   maintenance: { fg: "var(--maint)", bg: "var(--maint-soft)" },
 };
 
-export function uptimeColor(uptime: number | null): string {
+// Colour for a day tick. `degraded` flags a day that stayed available (so its
+// uptime ratio can still round to ~100%) but ran slow or partial — those days
+// must read amber, never the all-clear green.
+export function uptimeColor(uptime: number | null, degraded = false): string {
   if (uptime === null) return "var(--muted)";
-  if (uptime >= 0.999) return "var(--ok)";
+  if (uptime >= 0.999) return degraded ? "var(--degraded)" : "var(--ok)";
   if (uptime >= 0.98) return "var(--degraded)";
   return "var(--down)";
 }
+
+// Health-worst ordering, shared by the uptime overlay logic.
+export const HEALTH_RANK: Record<Health, number> = {
+  operational: 0,
+  maintenance: 1,
+  degraded: 2,
+  down: 3,
+};
 
 export function formatUptime(ratio: number | null): string {
   if (ratio === null) return "—";
