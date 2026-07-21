@@ -34,6 +34,22 @@ function dayHealth(d: UptimeDay | undefined): Health {
   return "operational";
 }
 
+// Tooltip text for a hovered day. A raw uptime % only reassures on a healthy
+// (green) day; on a degraded/down day it's misleading — a slow day still counts
+// as "available" so the ratio can read ~100% while the tick is amber. So show
+// the state word ("Running slow" / "Down") for anything worse than operational,
+// and reserve the percentage for green days.
+function hoverLabel(
+  d: UptimeDay,
+  isToday: boolean,
+  overlay: Health | null,
+): string {
+  if (d.uptime === null) return overlay ? STATUS_LABEL[overlay] : "No data";
+  let h = dayHealth(d);
+  if (isToday && overlay && HEALTH_RANK[overlay] > HEALTH_RANK[h]) h = overlay;
+  return h === "operational" ? formatUptime(d.uptime) : STATUS_LABEL[h];
+}
+
 // A 90-day uptime strip. Each tick is a day; colour encodes that day's uptime,
 // empty days render as faint placeholders. A single tooltip tracks the hovered
 // day and is anchored so it never spills past the card edge.
@@ -110,11 +126,7 @@ export function UptimeBar({
             style={{ left: `${centrePct}%`, transform: anchor }}
           >
             <span className="font-medium text-[var(--text)]">
-              {hover === todayIdx && overlayToday !== null
-                ? STATUS_LABEL[overlayToday]
-                : active.uptime === null
-                  ? "No data"
-                  : formatUptime(active.uptime)}
+              {hoverLabel(active, hover === todayIdx, overlayToday)}
             </span>
             <span className="text-[var(--text-faint)]">
               {" · "}
